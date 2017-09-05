@@ -59,10 +59,19 @@ var initializeMouse = function() {
 
 var handleMouseDrag = function(d) {
   d3.select(this)
-    .attr('cx', d.x = d3.event.x)
-    .attr('cy', d.y = d3.event.y);
+    .attr('cx', d.x = (d3.event.x < circleRadius) ? circleRadius : Math.min(d3.event.x, width - 2 * circleRadius))
+    .attr('cy', d.y = (d3.event.y < circleRadius) ? circleRadius : Math.min(d3.event.y, height - 2 * circleRadius));
   
-  if (isHit(d)) {
+  updateScore();  
+  
+  var hit = isHit(d);
+  if (hit) {
+    if (d3.select(this).attr('fill') !== 'red') {
+      updateCollisions();
+    }
+    
+    resetCurrentScore();
+    
     d3.select(this).attr('fill', 'red');
   } else {
     d3.select(this).attr('fill', 'orange');
@@ -81,6 +90,28 @@ var isHit = function(mouse) {
     }
   });
   return hit;
+};
+
+var updateScore = function() {
+  var currentScoreSelection = d3.select('div.current span');
+  var currentScore = parseInt(currentScoreSelection.text());
+  currentScoreSelection.text(currentScore + 1);
+  
+  var highscoreSelection = d3.select('div.highscore span');
+  var highscore = parseInt(highscoreSelection.text()); 
+  if (currentScore > highscore) {
+    highscoreSelection.text(currentScore);
+  }
+};
+
+var resetCurrentScore = function() {
+  d3.select('div.current span').text(0);
+};
+
+var updateCollisions = function() {
+  var collisionsSelection = d3.select('div.collisions span');
+  var collisions = parseInt(collisionsSelection.text());
+  collisionsSelection.text(collisions + 1);
 };
 
 init(5, 25);
