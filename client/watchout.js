@@ -44,12 +44,11 @@ var update = function() {
        .data(circlePositions)
        .transition().duration(2500)
        .attr('cx', function(d) { return d.x; })
-       .attr('cy', function(d) { return d.y; })
-       .attr('r', circleRadius);  
+       .attr('cy', function(d) { return d.y; });
 };
 
 var initializeMouse = function() {
-  board.selectAll('circle.mouse')
+  board.select('circle.mouse')
        .data([{x: .5 * width, y: .5 * height}])
          .attr('fill', 'orange')
          .attr('cx', function(d) { return d.x; })
@@ -62,9 +61,27 @@ var handleMouseDrag = function(d) {
   d3.select(this)
     .attr('cx', d.x = d3.event.x)
     .attr('cy', d.y = d3.event.y);
+  
+  if (isHit(d)) {
+    d3.select(this).attr('fill', 'red');
+  } else {
+    d3.select(this).attr('fill', 'orange');
+  }
 };
 
-init(10, 10);
-setInterval(update, 2500);
+var isHit = function(mouse) {
+  var hit = false;
+  board.selectAll('circle.enemy').each(function(d) {
+    var selection = d3.select(this);
+    
+    var distance = Math.sqrt(Math.pow(selection.attr('cx') - mouse.x, 2) + Math.pow(selection.attr('cy') - mouse.y, 2));
+    
+    if (distance < 2 * circleRadius) {
+      hit = true;
+    }
+  });
+  return hit;
+};
 
-d3.selectAll('circle.mouse').on('.drag', function() { handleMouseDrag(); });
+init(5, 25);
+setInterval(update, 2500);
