@@ -1,4 +1,4 @@
-var body, board, height, width, nCircles, circleRadius, circlePositions;
+var body, board, height, width, nCircles, circleRadius, circlePositions, itemsVisited;
 
 var init = function(n, r) {
   body = d3.select('body');
@@ -7,6 +7,11 @@ var init = function(n, r) {
   width = board.attr('width');
   nCircles = n;
   circleRadius = r;
+  currentScore = 0;
+  highscore = 0;
+  collisions = 0;
+  itemsVisited = 0;
+  hasCollision = false;
   initializeMouse();
   initializeEnemies();
 };
@@ -31,20 +36,11 @@ var initializeEnemies = function() {
   board.selectAll('circle.enemy')
        .data(circlePositions)
        .enter().append('circle')
+         .attr('fill', 'cyan')
          .attr('class', 'enemy')
          .attr('cx', function(d) { return d.x; })
          .attr('cy', function(d) { return d.y; })
          .attr('r', circleRadius);
-};
-
-var update = function() {
-  generateNewPositions();
-  
-  board.selectAll('circle.enemy')
-       .data(circlePositions)
-       .transition().duration(2500)
-       .attr('cx', function(d) { return d.x; })
-       .attr('cy', function(d) { return d.y; });
 };
 
 var initializeMouse = function() {
@@ -57,62 +53,91 @@ var initializeMouse = function() {
        .call(d3.behavior.drag().on('drag', handleMouseDrag));
 };
 
+var update = function() {
+  var mouse = board.select('.mouse');
+  
+  generateNewPositions();
+  
+  board.selectAll('circle.enemy')
+       .data(circlePositions)
+       .transition().duration(2500)
+       .attr('cx', function(d) { return d.x; })
+       .attr('cy', function(d) { return d.y; })
+       .tween('dummy', function(d) {
+         var mouse = d3.select('.mouse');
+         return function(t) {           
+           var enemy = d3.select(this);
+           handleCollisions(mouse, enemy);
+           
+           itemsVisited++;
+           if (itemsVisited === nCircles) {
+             updateCurrentScore();
+             
+             if (hasCollision) {
+               if (mouse.attr('fill') !== 'red') {
+                 updateCollisions();
+               }
+               resetCurrentScore();
+               renderCurrentScore();
+               mouse.attr('fill', 'red');
+             } else {
+               mouse.attr('fill', 'orange');
+             }
+             
+             updateHighscore();
+             
+             itemsVisited = 0;
+             hasCollision = false;
+           }
+         };
+       });
+};
+
 var handleMouseDrag = function(d) {
   d3.select(this)
-    .attr('cx', d.x = (d3.event.x < circleRadius) ? circleRadius : Math.min(d3.event.x, width - 2 * circleRadius))
-    .attr('cy', d.y = (d3.event.y < circleRadius) ? circleRadius : Math.min(d3.event.y, height - 2 * circleRadius));
-  
-  updateScore();  
-  
-  var hit = isHit(d);
-  if (hit) {
-    if (d3.select(this).attr('fill') !== 'red') {
-      updateCollisions();
-    }
-    
-    resetCurrentScore();
-    
-    d3.select(this).attr('fill', 'red');
-  } else {
-    d3.select(this).attr('fill', 'orange');
+    .attr('cx', d.x = (d3.event.x < circleRadius) ? circleRadius : Math.min(d3.event.x, width - circleRadius))
+    .attr('cy', d.y = (d3.event.y < circleRadius) ? circleRadius : Math.min(d3.event.y, height - circleRadius));
+};
+
+var handleCollisions = function(mouse, enemy) {
+  var dx = enemy.attr('cx') - mouse.attr('cx');
+  var dy = enemy.attr('cy') - mouse.attr('cy');
+  if (Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2)) < 2 * circleRadius) {
+    console.log('REACHED');
+    hasCollision = true;
   }
 };
 
-var isHit = function(mouse) {
-  var hit = false;
-  board.selectAll('circle.enemy').each(function(d) {
-    var selection = d3.select(this);
-    
-    var distance = Math.sqrt(Math.pow(selection.attr('cx') - mouse.x, 2) + Math.pow(selection.attr('cy') - mouse.y, 2));
-    
-    if (distance < 2 * circleRadius) {
-      hit = true;
-    }
-  });
-  return hit;
+var renderCurrentScore = function() {
+  d3.select('div.current span').text(currentScore);
 };
 
-var updateScore = function() {
-  var currentScoreSelection = d3.select('div.current span');
-  var currentScore = parseInt(currentScoreSelection.text());
-  currentScoreSelection.text(currentScore + 1);
-  
-  var highscoreSelection = d3.select('div.highscore span');
-  var highscore = parseInt(highscoreSelection.text()); 
+var updateCurrentScore = function() {
+  currentScore++;
+  renderCurrentScore();
+};
+
+var updateHighscore = function() {
   if (currentScore > highscore) {
-    highscoreSelection.text(currentScore);
-  }
+    d3.select('div.highscore span').text(currentScore);
+    highscore = currentScore;
+  }  
 };
 
 var resetCurrentScore = function() {
-  d3.select('div.current span').text(0);
+  currentScore = 0;
 };
 
 var updateCollisions = function() {
-  var collisionsSelection = d3.select('div.collisions span');
-  var collisions = parseInt(collisionsSelection.text());
-  collisionsSelection.text(collisions + 1);
+  d3.select('div.collisions span').text(++collisions);
 };
 
-init(5, 25);
-setInterval(update, 2500);
+var run = function() {
+  init(20, 10);
+  setInterval((function() {
+    update();
+    return update;
+  })(), 2500);
+};
+
+run();
