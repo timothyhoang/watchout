@@ -103,7 +103,6 @@ var handleCollisions = function(mouse, enemy) {
   var dx = enemy.attr('cx') - mouse.attr('cx');
   var dy = enemy.attr('cy') - mouse.attr('cy');
   if (Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2)) < 2 * circleRadius) {
-    console.log('REACHED');
     hasCollision = true;
   }
 };
